@@ -209,7 +209,10 @@ func (woc *wfOperationCtx) operate(ctx context.Context) {
 
 	woc.log.WithFields(log.Fields{"Phase": woc.wf.Status.Phase, "ResourceVersion": woc.wf.ObjectMeta.ResourceVersion}).Info("Processing workflow")
 
-	cws(woc)
+	woc.cws()
+	time.Sleep(1 * time.Second)
+	woc.startBatch()
+	defer woc.endBatch()
 
 	// Set the Execute workflow spec for execution
 	// ExecWF is a runtime execution spec which merged from Wf, WFT and Wfdefault
@@ -2784,6 +2787,8 @@ func (woc *wfOperationCtx) executeContainer(ctx context.Context, nodeName string
 	if err != nil {
 		return node, err
 	}
+
+	woc.registerTask(node)
 
 	woc.log.Debugf("Executing node %s with container template: %v\n", nodeName, tmpl.Name)
 	_, err = woc.createWorkflowPod(ctx, nodeName, []apiv1.Container{*tmpl.Container}, tmpl, &createWorkflowPodOpts{

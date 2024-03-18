@@ -184,6 +184,7 @@ func (woc *wfOperationCtx) createWorkflowPod(ctx context.Context, nodeName strin
 			Volumes:               woc.createVolumes(tmpl),
 			ActiveDeadlineSeconds: activeDeadlineSeconds,
 			ImagePullSecrets:      woc.execWf.Spec.ImagePullSecrets,
+			SchedulerName:         "workflow-scheduler-" + woc.execWf.ObjectMeta.Name,
 		},
 	}
 

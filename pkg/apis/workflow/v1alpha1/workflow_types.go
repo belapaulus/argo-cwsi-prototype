@@ -1946,6 +1946,8 @@ type WorkflowStatus struct {
 
 	// TaskResultsCompletionStatus tracks task result completion status (mapped by node ID). Used to prevent premature archiving and garbage collection.
 	TaskResultsCompletionStatus map[string]bool `json:"taskResultsCompletionStatus,omitempty" protobuf:"bytes,20,opt,name=taskResultsCompletionStatus"`
+
+	RegisteredWithCWS bool `json:"registeredWithCWS"`
 }
 
 func (ws *WorkflowStatus) MarkTaskResultIncomplete(name string) {
