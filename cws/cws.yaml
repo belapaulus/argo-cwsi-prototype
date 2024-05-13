@@ -16,7 +16,7 @@ spec:
       value: workflow-scheduler
     - name: AUTOCLOSE
       value: "false"
-    image: bpalu/cws:0.0.14
+    image: bpalu/cws:latest
     imagePullPolicy: Always
     name: workflow-scheduler
     resources:

@@ -35,6 +35,10 @@ spec:
       command: ./hack/port-forward.sh
       ports: 9000
       dependencies: install
+    - name: cws
+      command: ./cws/start.sh
+      dependencies: install
+      watch: cws/start.sh 
     - name: controller
       command: ./dist/workflow-controller
       dependencies: install build-controller port-forward
