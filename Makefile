@@ -469,6 +469,12 @@ test: server/static/files.go
 	@mkdir -p dist
 	touch dist/test
 
+CONTROLLER := github.com/argoproj/argo-workflows/v3/workflow/controller
+CWSTESTS   := EmptyTest
+.PHONY: cwstest
+cwstest:
+	echo -n $(CWSTESTS) | xargs -t -d" " -l1 go test -v $(CONTROLLER) -run
+
 .PHONY: install
 install: githooks
 	kubectl get ns $(KUBE_NAMESPACE) || kubectl create ns $(KUBE_NAMESPACE)
