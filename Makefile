@@ -470,7 +470,7 @@ test: server/static/files.go
 	touch dist/test
 
 CONTROLLER := github.com/argoproj/argo-workflows/v3/workflow/controller
-CWSTESTS   := EmptyTest
+CWSTESTS   := EmptyTest TestParseDAGs
 .PHONY: cwstest
 cwstest:
 	echo -n $(CWSTESTS) | xargs -t -d" " -l1 go test -v $(CONTROLLER) -run
