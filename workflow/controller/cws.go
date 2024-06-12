@@ -23,7 +23,7 @@ type registerWorkflowRequestBody struct {
 
 type vertex struct {
 	Label string `json:"label"`
-	Uid   uint32 `json:"uid"`
+	Uid   int    `json:"uid"`
 	Rank  int    `json:"rank"`
 	Type  string `json:"type"`
 }
@@ -31,8 +31,8 @@ type vertex struct {
 type edge struct {
 	Uid   int    `json:"uid"`
 	Label string `json:"label"`
-	From  uint32 `json:"from"`
-	To    uint32 `json:"to"`
+	From  int    `json:"from"`
+	To    int    `json:"to"`
 }
 
 type taskParams struct{}
@@ -144,7 +144,7 @@ func (woc *wfOperationCtx) submitWF() bool {
 			Label: node.name,
 			Uid:   node.id,
 			Rank:  0,
-			Type:  "PROCESS",
+			Type:  node.nodeType,
 		})
 		// TODO Label
 		for e := range node.post {
@@ -216,6 +216,7 @@ func (woc *wfOperationCtx) endBatch() bool {
 }
 
 func (woc *wfOperationCtx) registerTask(node *v1alpha1.NodeStatus, podName string) bool {
+	// TODO normalize name
 	woc.cwslog("registering task: " + node.Name)
 	// TODO: understand task fields
 	body := task{

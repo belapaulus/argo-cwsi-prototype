@@ -1,0 +1,91 @@
+# The following workflow executes a simple DAG
+#    A
+#   / \
+#  /   1
+#  /   /\
+# B   2 3
+# \   \ /
+#  \   4
+#   \ /
+#    D
+#    |
+#    E
+# But the definition of the DAG is split up in to parts like so:
+#
+# 1:
+#   A
+#  / \
+# B   2
+#  \ /
+#   D
+#   |
+#   E
+#
+# 2:
+#   A
+#  / \
+# 2   2
+#  \ /
+#   D
+#
+# where C is of type suspend so it should not be part of the final dag
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: testwf-
+spec:
+  entrypoint: testwf
+
+  templates:
+  - name: testwf
+    dag:
+      tasks:
+      - name: A
+        template: echo
+        arguments:
+          parameters: [{name: message, value: A}]
+      - name: B
+        depends: "A"
+        template: echo
+        arguments:
+          parameters: [{name: message, value: B}]
+      - name: C
+        depends: "A"
+        template: recurse
+      - name: D
+        template: echo
+        depends: "B && C"
+        arguments:
+          parameters: [{name: message, value: D}]
+      - name: E
+        depends: "D"
+        template: echo
+        arguments:
+          parameters: [{name: message, value: E}]
+
+  - name: echo
+    inputs:
+      parameters:
+      - name: message
+    container:
+      image: alpine:3.7
+      command: [echo, "{{inputs.parameters.message}}"]
+
+  - name: recurse
+    dag:
+      tasks:
+      - name: A
+        template: echo
+        arguments:
+          parameters: [{name: message, value: A}]
+      - name: B
+        depends: "!A.Succeeded"
+        template: recurse
+      - name: C
+        depends: "!A.Succeeded"
+        template: recurse
+      - name: D
+        template: echo
+        depends: "B && C"
+        arguments:
+          parameters: [{name: message, value: D}]
