@@ -12,7 +12,7 @@
 assets
 community
 coverage.out
-dist
+#dist
 docs
 examples
 logs
