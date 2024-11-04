@@ -59,7 +59,8 @@ type task struct {
 
 // TODO: close response bodies if necessary
 
-var cwsURL = "http://localhost:8081"
+// var cwsURL = "http://localhost:8081"
+var cwsURL = "http://workflow-scheduler"
 var registeredTasks = 0
 
 func (woc *wfOperationCtx) cws() {
@@ -99,12 +100,12 @@ func (woc *wfOperationCtx) registerWF() bool {
 		Dns:          "",
 		TraceEnabled: true,
 		Namespace:    "argo",
-		Strategy:     "fifo-fair",
+		Strategy:     woc.execWf.Spec.SchedulerName,
 	}
 	resp, err := woc.cwsPOST("", body)
 	// TODO: read response code and handle errors
 	if err != nil || resp.StatusCode != 200 {
-		woc.cwslog("...error")
+		woc.cwslog(resp.Status)
 		return false
 	}
 	woc.cwslog("...ok")
@@ -134,7 +135,13 @@ func (woc *wfOperationCtx) deleteWF() bool {
 
 func (woc *wfOperationCtx) submitWF() bool {
 	// submit graph
+	// TODO save normalization map
 	nodes := woc.parseTemplateTree()
+	woc.wf.Status.CWSNodes = make(map[string]bool)
+	for node := range nodes {
+		woc.cwslog("node: " + node)
+		woc.wf.Status.CWSNodes[node] = true
+	}
 	edgeCount := 0
 	var verticesBody []vertex
 	var edgesBody []edge
@@ -222,12 +229,12 @@ func (woc *wfOperationCtx) endBatch() bool {
 }
 
 func (woc *wfOperationCtx) registerTask(node *v1alpha1.NodeStatus, podName string) bool {
-	// TODO normalize name
-	woc.cwslog("registering task: " + node.Name)
+	name := woc.normalizeTaskName(node.Name)
+	woc.cwslog("registering task '" + node.Name + "' with normalized name '" + name + "'")
 	// TODO: understand task fields
 	body := task{
-		Task:            node.Name,
-		Name:            node.Name,
+		Task:            name,
+		Name:            name,
 		SchedulerParams: taskParams{},
 		Inputs:          taskInputs{},
 		RunName:         podName,
@@ -246,4 +253,16 @@ func (woc *wfOperationCtx) registerTask(node *v1alpha1.NodeStatus, podName strin
 	registeredTasks++
 	woc.cwslog("...ok")
 	return true
+}
+
+func (woc *wfOperationCtx) normalizeTaskName(taskName string) string {
+	for i := range taskName {
+		prefix := taskName[0 : i+1]
+		if woc.wf.Status.CWSNodes[prefix] {
+			woc.cwslog("normalized taskName '" + taskName + "' to '" + prefix + "'")
+			return prefix
+		}
+		woc.cwslog(prefix + " not in nodes")
+	}
+	panic("unknown cws node " + taskName)
 }

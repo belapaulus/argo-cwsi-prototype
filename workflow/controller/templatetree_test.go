@@ -9,17 +9,23 @@ import (
 
 func checkGraph(t *testing.T, expected graph, actual graph) {
 	for nodeName, node := range actual {
-		assert.Equal(t, expected[nodeName].name, node.name)
-		assert.Equal(t, expected[nodeName].pre, node.pre)
-		assert.Equal(t, expected[nodeName].post, node.post)
-		assert.Equal(t, expected[nodeName].nodeType, node.nodeType)
+		assert.Equal(t, true, expected[nodeName] != nil)
+		if expected[nodeName] != nil {
+			assert.Equal(t, expected[nodeName].name, node.name)
+			assert.Equal(t, expected[nodeName].pre, node.pre)
+			assert.Equal(t, expected[nodeName].post, node.post)
+			assert.Equal(t, expected[nodeName].nodeType, node.nodeType)
+		}
 	}
 	// check that no expected nodes are missing
 	for nodeName, node := range expected {
-		assert.Equal(t, node.name, actual[nodeName].name)
-		assert.Equal(t, node.pre, actual[nodeName].pre)
-		assert.Equal(t, node.post, actual[nodeName].post)
-		assert.Equal(t, node.nodeType, actual[nodeName].nodeType)
+		assert.Equal(t, true, actual[nodeName] != nil)
+		if actual[nodeName] != nil {
+			assert.Equal(t, node.name, actual[nodeName].name)
+			assert.Equal(t, node.pre, actual[nodeName].pre)
+			assert.Equal(t, node.post, actual[nodeName].post)
+			assert.Equal(t, node.nodeType, actual[nodeName].nodeType)
+		}
 	}
 }
 
@@ -156,6 +162,26 @@ func TestParseDAGs(t *testing.T) {
 				pre:      map[string]bool{".D": true},
 				post:     map[string]bool{},
 				name:     ".E",
+				nodeType: "PROCESS",
+			},
+		},
+		"@testdata/steps.yaml": {
+			"[0].hello1": {
+				pre:      map[string]bool{},
+				post:     map[string]bool{"[1].hello2a": true, "[1].hello2b": true},
+				name:     "[0].hello1",
+				nodeType: "PROCESS",
+			},
+			"[1].hello2a": {
+				pre:      map[string]bool{"[0].hello1": true},
+				post:     map[string]bool{},
+				name:     "[1].hello2a",
+				nodeType: "PROCESS",
+			},
+			"[1].hello2b": {
+				pre:      map[string]bool{"[0].hello1": true},
+				post:     map[string]bool{},
+				name:     "[1].hello2b",
 				nodeType: "PROCESS",
 			},
 		},

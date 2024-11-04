@@ -1,16 +1,19 @@
 package controller
 
 import (
+	"fmt"
 	"hash/fnv"
 
 	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 )
 
+// TODO move file to a better suited package
+
 type parseNode struct {
 	// set of nodes that this node depends on
-	pre map[string]bool
+	pre stringset
 	// set of nodes that depend on this node
-	post         map[string]bool
+	post         stringset
 	name         string
 	templateName string
 	// unique identifier for the scheduler
@@ -23,7 +26,7 @@ type graph map[string]*parseNode
 type parseCtx struct {
 	// map to look up templates by name
 	templates map[string]*v1alpha1.Template
-	seen      map[string]bool
+	seen      stringset
 	// map that contains all nodes by name
 	nodes graph
 	// node counter currently used to create id
@@ -52,7 +55,7 @@ func (woc *wfOperationCtx) parseTemplateTree() graph {
 	pc := &parseCtx{
 		templates: make(map[string]*v1alpha1.Template),
 		nodes:     make(graph),
-		seen:      make(map[string]bool),
+		seen:      make(stringset),
 		woc:       woc,
 	}
 	// store all workflow templates in map
@@ -71,8 +74,8 @@ func (woc *wfOperationCtx) parseTemplateTree() graph {
 
 func (pc *parseCtx) newNode(nodeName string, templateName string) *parseNode {
 	return &parseNode{
-		pre:          make(map[string]bool),
-		post:         make(map[string]bool),
+		pre:          make(stringset),
+		post:         make(stringset),
 		name:         nodeName,
 		templateName: templateName,
 		id:           getNodeIDFromName(nodeName),
@@ -86,12 +89,12 @@ func (pc *parseCtx) expandNode(nodeName string) {
 	// TODO detect recursive templates (and panic :O)
 	node := pc.nodes[nodeName]
 	template := node.templateName
-	if pc.seen[template] {
+	if pc.seen.contains(template) {
 		node.nodeType = "RECURSE"
 		return
 	}
-	pc.seen[template] = true
-	defer delete(pc.seen, template)
+	pc.seen.add(template)
+	defer pc.seen.del(template)
 	templateType := pc.templates[template].GetType()
 	pc.woc.cwslog("graph before expanding " + nodeName + " with template " + template + " of type " + string(templateType))
 	pc.printGraph()
@@ -105,7 +108,7 @@ func (pc *parseCtx) expandNode(nodeName string) {
 		//   container set as an atomic entity
 		// - this is a leaf template
 	case v1alpha1.TemplateTypeSteps:
-		// TODO
+		pc.expandSteps(nodeName)
 	case v1alpha1.TemplateTypeDAG:
 		pc.expandDAG(nodeName)
 	case v1alpha1.TemplateTypeScript:
@@ -159,47 +162,75 @@ func (pc *parseCtx) expandDAG(nodeName string) {
 	tasks := pc.templates[nodeToExpand.templateName].DAG.Tasks
 	dagCtx := pc.getDAGCtx(nodeName)
 	// initialize new nodes
-	newNodes := make(map[string]*parseNode)
+	newNodes := make(stringset)
 	for _, task := range tasks {
 		node := pc.newNode(dagCtx.taskNodeName(task.Name), task.Template)
-		newNodes[node.name] = node
+		newNodes.add(node.name)
+		pc.nodes[node.name] = node
 	}
 	// add dependencies from dag
 	for _, task := range tasks {
 		// assuming that if A depends on B GetTaskDependencies(A) returns [B]
-		dependencies := dagCtx.GetTaskDependencies(task.Name)
-		for _, dep := range dependencies {
-			pre := dagCtx.taskNodeName(dep)
-			post := dagCtx.taskNodeName(task.Name)
-			newNodes[pre].post[post] = true
-			newNodes[post].pre[pre] = true
+		deps := dagCtx.GetTaskDependencies(task.Name)
+		pre := make(stringset)
+		for _, dep := range deps {
+			pre.add(dagCtx.taskNodeName(dep))
 		}
+		post := stringSetFromString(dagCtx.taskNodeName(task.Name))
+		pc.addAllEdges(pre, post)
 	}
 	// new nodes with no pre or post dependencies inherit the dependencies
 	// of the node being expanded
 	// TODO check pre[x] = true for all x
-	for _, newNode := range newNodes {
-		if len(newNode.pre) == 0 {
-			for dep := range nodeToExpand.pre {
-				newNode.pre[dep] = true
-				pc.nodes[dep].post[newNode.name] = true
-			}
+	for newNode := range newNodes {
+		if len(pc.nodes[newNode].pre) == 0 {
+			pc.addAllEdges(nodeToExpand.pre, stringSetFromString(newNode))
 		}
-		if len(newNode.post) == 0 {
-			for dep := range nodeToExpand.post {
-				newNode.post[dep] = true
-				pc.nodes[dep].pre[newNode.name] = true
-			}
+		if len(pc.nodes[newNode].post) == 0 {
+			pc.addAllEdges(stringSetFromString(newNode), nodeToExpand.post)
 		}
 	}
-	// add new nodes
-	for newNodeName, newNode := range newNodes {
-		pc.nodes[newNodeName] = newNode
-	}
+	// remove expanded node
 	pc.removeNode(nodeToExpand.name)
 	// parse tasks
 	for newNodeName := range newNodes {
 		pc.expandNode(newNodeName)
+	}
+}
+
+func (pc *parseCtx) expandSteps(nodeName string) {
+	nodeToExpand := pc.nodes[nodeName]
+	previous := nodeToExpand.pre
+	template := pc.templates[nodeToExpand.templateName]
+	newNodes := make(stringset)
+	for i, stepGroup := range template.Steps {
+		current := make(stringset)
+		stepGroupName := fmt.Sprintf("%s[%d]", nodeName, i)
+		for _, step := range stepGroup.Steps {
+			stepName := fmt.Sprintf("%s.%s", stepGroupName, step.Name)
+			node := pc.newNode(stepName, step.Template)
+			newNodes.add(node.name)
+			current.add(node.name)
+			pc.nodes[node.name] = node
+		}
+		pc.addAllEdges(previous, current)
+		previous = current
+	}
+	pc.addAllEdges(previous, nodeToExpand.post)
+	pc.removeNode(nodeToExpand.name)
+	for newNodeName := range newNodes {
+		pc.expandNode(newNodeName)
+	}
+}
+
+func (pc *parseCtx) addAllEdges(pre stringset, post stringset) {
+	// adds all possible edges between the nodes in pre and post
+	// assumes that the node in pre and post exist in pc.nodes
+	for node := range pre {
+		pc.nodes[node].post.addAll(post)
+	}
+	for node := range post {
+		pc.nodes[node].pre.addAll(pre)
 	}
 }
 

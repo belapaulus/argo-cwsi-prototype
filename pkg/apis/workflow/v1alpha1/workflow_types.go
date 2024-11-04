@@ -1948,6 +1948,8 @@ type WorkflowStatus struct {
 	TaskResultsCompletionStatus map[string]bool `json:"taskResultsCompletionStatus,omitempty" protobuf:"bytes,20,opt,name=taskResultsCompletionStatus"`
 
 	RegisteredWithCWS bool `json:"registeredWithCWS"`
+
+	CWSNodes map[string]bool `json:"cwsNodes"`
 }
 
 func (ws *WorkflowStatus) MarkTaskResultIncomplete(name string) {

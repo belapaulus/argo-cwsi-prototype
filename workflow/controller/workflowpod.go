@@ -84,6 +84,13 @@ type createWorkflowPodOpts struct {
 func (woc *wfOperationCtx) createWorkflowPod(ctx context.Context, nodeName string, mainCtrs []apiv1.Container, tmpl *wfv1.Template, opts *createWorkflowPodOpts) (*apiv1.Pod, error) {
 	nodeID := woc.wf.NodeID(nodeName)
 
+	mynode, myerr := woc.wf.GetNodeByName(nodeName)
+	if myerr != nil {
+		panic("cws: this should not happen")
+	}
+	woc.cwslog("tyring to register node " + mynode.Name)
+	woc.registerTask(mynode, util.GeneratePodName(woc.wf.Name, mynode.Name, mynode.TemplateName, mynode.ID, util.GetWorkflowPodNameVersion(woc.wf)))
+
 	// we must check to see if the pod exists rather than just optimistically creating the pod and see if we get
 	// an `AlreadyExists` error because we won't get that error if there is not enough resources.
 	// Performance enhancement: Code later in this func is expensive to execute, so return quickly if we can.
@@ -184,9 +191,15 @@ func (woc *wfOperationCtx) createWorkflowPod(ctx context.Context, nodeName strin
 			Volumes:               woc.createVolumes(tmpl),
 			ActiveDeadlineSeconds: activeDeadlineSeconds,
 			ImagePullSecrets:      woc.execWf.Spec.ImagePullSecrets,
-			SchedulerName:         "workflow-scheduler-" + woc.execWf.ObjectMeta.Name,
 		},
 	}
+	// if scheduler name is set for workflow set scheduler name to cws
+	// otherwise ignore
+	if woc.execWf.Spec.SchedulerName != "" {
+		pod.Spec.SchedulerName = "workflow-scheduler-" + woc.execWf.ObjectMeta.Name
+	}
+
+	woc.log.Warn("cws: setting SchedulerName to:" + pod.Spec.SchedulerName)
 
 	if os.Getenv("ARGO_POD_STATUS_CAPTURE_FINALIZER") == "true" {
 		pod.ObjectMeta.Finalizers = append(pod.ObjectMeta.Finalizers, common.FinalizerPodStatus)
@@ -266,6 +279,7 @@ func (woc *wfOperationCtx) createWorkflowPod(ctx context.Context, nodeName strin
 	pod.Spec.InitContainers = []apiv1.Container{initCtr}
 
 	addSchedulingConstraints(pod, wfSpec, tmpl)
+	woc.log.Warn("cws: setting SchedulerName to:" + pod.Spec.SchedulerName)
 	woc.addMetadata(pod, tmpl)
 
 	err = addVolumeReferences(pod, woc.volumes, tmpl, woc.wf.Status.PersistentVolumeClaims)
@@ -523,6 +537,7 @@ func (woc *wfOperationCtx) createWorkflowPod(ctx context.Context, nodeName strin
 		return nil, ErrResourceRateLimitReached
 	}
 
+	woc.log.Warn("cws: creating pod with SchedulerName: " + pod.Spec.SchedulerName)
 	woc.log.Debugf("Creating Pod: %s (%s)", nodeName, pod.Name)
 
 	created, err := woc.controller.kubeclientset.CoreV1().Pods(woc.wf.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
@@ -778,12 +793,6 @@ func addSchedulingConstraints(pod *apiv1.Pod, wfSpec *wfv1.WorkflowSpec, tmpl *w
 		pod.Spec.Tolerations = wfSpec.Tolerations
 	}
 
-	// Set scheduler name (if specified)
-	if tmpl.SchedulerName != "" {
-		pod.Spec.SchedulerName = tmpl.SchedulerName
-	} else if wfSpec.SchedulerName != "" {
-		pod.Spec.SchedulerName = wfSpec.SchedulerName
-	}
 	// Set priorityClass (if specified)
 	if tmpl.PriorityClassName != "" {
 		pod.Spec.PriorityClassName = tmpl.PriorityClassName
