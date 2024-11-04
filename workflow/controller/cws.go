@@ -23,16 +23,16 @@ type registerWorkflowRequestBody struct {
 
 type vertex struct {
 	Label string `json:"label"`
-	Uid   int    `json:"uid"`
-	Rank  int    `json:"rank"`
-	Type  string `json:"type"`
+	Uid   uint32 `json:"uid"`
+	//Rank  int    `json:"rank"`
+	Type string `json:"type"`
 }
 
 type edge struct {
 	Uid   int    `json:"uid"`
 	Label string `json:"label"`
-	From  int    `json:"from"`
-	To    int    `json:"to"`
+	From  uint32 `json:"from"`
+	To    uint32 `json:"to"`
 }
 
 type taskParams struct{}
@@ -138,13 +138,19 @@ func (woc *wfOperationCtx) submitWF() bool {
 	edgeCount := 0
 	var verticesBody []vertex
 	var edgesBody []edge
+	var seen map[uint32]bool = make(map[uint32]bool)
 	for _, node := range nodes {
 		// TODO Rank
+		if seen[node.id] {
+			panic(node.id)
+		} else {
+			seen[node.id] = true
+		}
 		verticesBody = append(verticesBody, vertex{
 			Label: node.name,
 			Uid:   node.id,
-			Rank:  0,
-			Type:  node.nodeType,
+			//Rank:  0,
+			Type: node.nodeType,
 		})
 		// TODO Label
 		for e := range node.post {
@@ -229,6 +235,7 @@ func (woc *wfOperationCtx) registerTask(node *v1alpha1.NodeStatus, podName strin
 		MemoryInBytes:   128000000,
 		WorkDir:         "/",
 	}
+	// TODO taskid
 	taskID := 0
 	resp, err := woc.cwsPOST("/task/"+strconv.Itoa(taskID), body)
 	// TODO: read response code and handle errors

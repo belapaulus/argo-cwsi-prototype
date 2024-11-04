@@ -14,7 +14,7 @@ type parseNode struct {
 	name         string
 	templateName string
 	// unique identifier for the scheduler
-	id       int
+	id       uint32
 	nodeType string
 }
 
@@ -39,11 +39,12 @@ func (pc *parseCtx) printGraph() {
 	}
 }
 
-func getNodeIDFromName(name string) int {
+func getNodeIDFromName(name string) uint32 {
 	// TODO
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(name))
-	return int(h.Sum32()) / 1000000
+	//return int(h.Sum32()) / 1000000
+	return h.Sum32()
 }
 
 func (woc *wfOperationCtx) parseTemplateTree() graph {
