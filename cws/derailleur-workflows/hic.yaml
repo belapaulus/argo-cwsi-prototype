@@ -1,0 +1,206 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: derailleur-hic-
+spec:
+  entrypoint: graph
+  # schedulerName: rank_max-random
+  templates:
+  - name: graph
+    dag:
+      tasks:
+      - name: task--0x2dd547fe59f73712
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task--0x2dd547fe59f73712}, {name: runtime, value: 1.0}]
+      - name: task-0x458c6dc37b1bf6f5
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task-0x458c6dc37b1bf6f5}, {name: runtime, value: 0.0}]
+      - name: task--0x838fc76c78f2ff2
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task--0x838fc76c78f2ff2}, {name: runtime, value: 1.0}]
+      - name: task-0x1725b1806935a69d
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task-0x1725b1806935a69d}, {name: runtime, value: 20.0}]
+      - name: task--0x408878b7f4fec615
+        template: task
+        dependencies: [task-0x458c6dc37b1bf6f5]
+        arguments:
+            parameters: [{name: task-info, value: task--0x408878b7f4fec615}, {name: runtime, value: 3.9}]
+      - name: task--0x6c9861e2ffb2092b
+        template: task
+        dependencies: [task-0x458c6dc37b1bf6f5]
+        arguments:
+            parameters: [{name: task-info, value: task--0x6c9861e2ffb2092b}, {name: runtime, value: 3.914}]
+      - name: task--0x284a57b2e67c9bdd
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task--0x284a57b2e67c9bdd}, {name: runtime, value: 25.0}]
+      - name: task-0x78e8d5b949b53430
+        template: task
+        dependencies: [task-0x1725b1806935a69d]
+        arguments:
+            parameters: [{name: task-info, value: task-0x78e8d5b949b53430}, {name: runtime, value: 89.0}]
+      - name: task-0x10860b5e87f1dbc3
+        template: task
+        dependencies: [task-0x1725b1806935a69d]
+        arguments:
+            parameters: [{name: task-info, value: task-0x10860b5e87f1dbc3}, {name: runtime, value: 86.0}]
+      - name: task--0x769f54a80808607a
+        template: task
+        dependencies: [task-0x78e8d5b949b53430]
+        arguments:
+            parameters: [{name: task-info, value: task--0x769f54a80808607a}, {name: runtime, value: 3.254}]
+      - name: task--0x1844bd3b1ade3aaa
+        template: task
+        dependencies: [task-0x10860b5e87f1dbc3]
+        arguments:
+            parameters: [{name: task-info, value: task--0x1844bd3b1ade3aaa}, {name: runtime, value: 3.099}]
+      - name: task--0x565672eb40b4220c
+        template: task
+        dependencies: [task-0x1725b1806935a69d, task--0x769f54a80808607a]
+        arguments:
+            parameters: [{name: task-info, value: task--0x565672eb40b4220c}, {name: runtime, value: 13.0}]
+      - name: task--0x69399ea4afe92356
+        template: task
+        dependencies: [task-0x1725b1806935a69d, task--0x1844bd3b1ade3aaa]
+        arguments:
+            parameters: [{name: task-info, value: task--0x69399ea4afe92356}, {name: runtime, value: 12.0}]
+      - name: task--0x746ed0e438eb53dc
+        template: task
+        dependencies: [task-0x78e8d5b949b53430, task--0x565672eb40b4220c]
+        arguments:
+            parameters: [{name: task-info, value: task--0x746ed0e438eb53dc}, {name: runtime, value: 12.0}]
+      - name: task-0x412651507aafd89f
+        template: task
+        dependencies: [task--0x69399ea4afe92356, task-0x10860b5e87f1dbc3]
+        arguments:
+            parameters: [{name: task-info, value: task-0x412651507aafd89f}, {name: runtime, value: 11.0}]
+      - name: task--0x6ded55935ed3b4f4
+        template: task
+        dependencies: [task--0x746ed0e438eb53dc]
+        arguments:
+            parameters: [{name: task-info, value: task--0x6ded55935ed3b4f4}, {name: runtime, value: 0.0}]
+      - name: task--0x18301526c1edfb16
+        template: task
+        dependencies: [task--0x746ed0e438eb53dc, task-0x412651507aafd89f]
+        arguments:
+            parameters: [{name: task-info, value: task--0x18301526c1edfb16}, {name: runtime, value: 16.0}]
+      - name: task--0x7865b37f17be86f7
+        template: task
+        dependencies: [task-0x412651507aafd89f]
+        arguments:
+            parameters: [{name: task-info, value: task--0x7865b37f17be86f7}, {name: runtime, value: 0.0}]
+      - name: task-0x4166d3b4af80ddeb
+        template: task
+        dependencies: [task--0x18301526c1edfb16]
+        arguments:
+            parameters: [{name: task-info, value: task-0x4166d3b4af80ddeb}, {name: runtime, value: 1.0}]
+      - name: task-0x63bc6115658629c
+        template: task
+        dependencies: [task--0x18301526c1edfb16, task--0x838fc76c78f2ff2]
+        arguments:
+            parameters: [{name: task-info, value: task-0x63bc6115658629c}, {name: runtime, value: 24.0}]
+      - name: task-0x7d04ef7478a59c39
+        template: task
+        dependencies: [task-0x63bc6115658629c]
+        arguments:
+            parameters: [{name: task-info, value: task-0x7d04ef7478a59c39}, {name: runtime, value: 0.772}]
+      - name: task-0x2a1ea877bde9f38e
+        template: task
+        dependencies: [task-0x63bc6115658629c]
+        arguments:
+            parameters: [{name: task-info, value: task-0x2a1ea877bde9f38e}, {name: runtime, value: 1.0}]
+      - name: task--0x3c880049f7ef285d
+        template: task
+        dependencies: [task-0x7d04ef7478a59c39, task-0x458c6dc37b1bf6f5]
+        arguments:
+            parameters: [{name: task-info, value: task--0x3c880049f7ef285d}, {name: runtime, value: 0.0}]
+      - name: task--0x66380193f204c5f7
+        template: task
+        dependencies: [task--0x284a57b2e67c9bdd, task--0x7865b37f17be86f7, task-0x4166d3b4af80ddeb, task--0x6ded55935ed3b4f4, task-0x2a1ea877bde9f38e, task-0x7d04ef7478a59c39]
+        arguments:
+            parameters: [{name: task-info, value: task--0x66380193f204c5f7}, {name: runtime, value: 47.931}]
+      - name: task--0x195a6cc55fe67bfa
+        template: task
+        dependencies: [task--0x3c880049f7ef285d, task-0x458c6dc37b1bf6f5]
+        arguments:
+            parameters: [{name: task-info, value: task--0x195a6cc55fe67bfa}, {name: runtime, value: 5.206}]
+      - name: task--0x3f83605d1c6e4571
+        template: task
+        dependencies: [task--0x3c880049f7ef285d, task-0x458c6dc37b1bf6f5]
+        arguments:
+            parameters: [{name: task-info, value: task--0x3f83605d1c6e4571}, {name: runtime, value: 5.342}]
+      - name: task--0x75a33d335b53ad13
+        template: task
+        dependencies: [task--0x195a6cc55fe67bfa]
+        arguments:
+            parameters: [{name: task-info, value: task--0x75a33d335b53ad13}, {name: runtime, value: 3.371}]
+      - name: task--0x42355485e8cd8376
+        template: task
+        dependencies: [task--0x195a6cc55fe67bfa]
+        arguments:
+            parameters: [{name: task-info, value: task--0x42355485e8cd8376}, {name: runtime, value: 18.467}]
+      - name: task-0x704dcc8d9ef4e3e0
+        template: task
+        dependencies: [task--0x3f83605d1c6e4571]
+        arguments:
+            parameters: [{name: task-info, value: task-0x704dcc8d9ef4e3e0}, {name: runtime, value: 3.269}]
+      - name: task-0x579e6cb04e185ae2
+        template: task
+        dependencies: [task--0x75a33d335b53ad13]
+        arguments:
+            parameters: [{name: task-info, value: task-0x579e6cb04e185ae2}, {name: runtime, value: 22.0}]
+      - name: task-0x20169f45ac460d71
+        template: task
+        dependencies: [task--0x75a33d335b53ad13]
+        arguments:
+            parameters: [{name: task-info, value: task-0x20169f45ac460d71}, {name: runtime, value: 13.0}]
+      - name: task--0x42149d791d707f5a
+        template: task
+        dependencies: [task--0x75a33d335b53ad13]
+        arguments:
+            parameters: [{name: task-info, value: task--0x42149d791d707f5a}, {name: runtime, value: 88.0}]
+      - name: task--0x1815a80ed4fc37d0
+        template: task
+        dependencies: [task--0x75a33d335b53ad13]
+        arguments:
+            parameters: [{name: task-info, value: task--0x1815a80ed4fc37d0}, {name: runtime, value: 5.209}]
+      - name: task-0x17ed488112c9266b
+        template: task
+        dependencies: [task-0x704dcc8d9ef4e3e0]
+        arguments:
+            parameters: [{name: task-info, value: task-0x17ed488112c9266b}, {name: runtime, value: 3.726}]
+      - name: task-0x426d2892258698c1
+        template: task
+        dependencies: [task-0x704dcc8d9ef4e3e0, task-0x458c6dc37b1bf6f5]
+        arguments:
+            parameters: [{name: task-info, value: task-0x426d2892258698c1}, {name: runtime, value: 34.0}]
+      - name: task-0x49f29d5bc2cae688
+        template: task
+        dependencies: [task--0x1815a80ed4fc37d0]
+        arguments:
+            parameters: [{name: task-info, value: task-0x49f29d5bc2cae688}, {name: runtime, value: 0.071}]
+      - name: task--0x6799e6f0577c1a3b
+        template: task
+        dependencies: [task-0x17ed488112c9266b]
+        arguments:
+            parameters: [{name: task-info, value: task--0x6799e6f0577c1a3b}, {name: runtime, value: 0.185}]
+      - name: task-0x40d11d0901b570c0
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task-0x40d11d0901b570c0}, {name: runtime, value: 0.383}]
+  - name: task
+    inputs:
+      parameters:
+      - name: task-info
+      - name: runtime
+    container:
+      image: alpine:3.7
+      command: ["sh", "-c", "echo {{ inputs.parameters.task-info }} && sleep {{inputs.parameters.runtime}}"]
+      resources:
+        requests:
+          cpu: 1

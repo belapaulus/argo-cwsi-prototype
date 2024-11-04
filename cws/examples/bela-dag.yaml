@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: bela-dag-
+spec:
+  entrypoint: main
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: a
+            template: whalesay
+            arguments:
+              parameters: [{name: message, value: hello}]
+          - name: b
+            dependencies: [a]
+            template: whalesay
+            arguments:
+              parameters: [{name: message, value: hello}]
+    - name: whalesay
+      inputs:
+        parameters:
+          - name: message
+      container: 
+        image: docker/whalesay
+        command: [cowsay]
+        args: ["{{inputs.parameters.message}}"]

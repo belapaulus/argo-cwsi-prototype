@@ -1,0 +1,73 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: derailleur-bacass-
+spec:
+  entrypoint: graph
+  # schedulerName: rank_max-random
+  templates:
+  - name: graph
+    dag:
+      tasks:
+      - name: task--0x699a1c7d2106f162
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task--0x699a1c7d2106f162}, {name: runtime, value: 37.0}]
+      - name: task-0x3e73f7737709a21b
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task-0x3e73f7737709a21b}, {name: runtime, value: 208.0}]
+      - name: task-0x238825d18ea6976
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task-0x238825d18ea6976}, {name: runtime, value: 37.0}]
+      - name: task-0x5a6a5afa3f921362
+        template: task
+        arguments:
+            parameters: [{name: task-info, value: task-0x5a6a5afa3f921362}, {name: runtime, value: 192.0}]
+      - name: task--0x33bb8da091d0fa0c
+        template: task
+        dependencies: [task-0x3e73f7737709a21b]
+        arguments:
+            parameters: [{name: task-info, value: task--0x33bb8da091d0fa0c}, {name: runtime, value: 949.0}]
+      - name: task--0x64f40668fe82071
+        template: task
+        dependencies: [task-0x5a6a5afa3f921362]
+        arguments:
+            parameters: [{name: task-info, value: task--0x64f40668fe82071}, {name: runtime, value: 1385.0}]
+      - name: task-0x4da44e2a1a04d833
+        template: task
+        dependencies: [task--0x33bb8da091d0fa0c]
+        arguments:
+            parameters: [{name: task-info, value: task-0x4da44e2a1a04d833}, {name: runtime, value: 553.0}]
+      - name: task--0x394388f49792f72
+        template: task
+        dependencies: [task--0x33bb8da091d0fa0c, task--0x64f40668fe82071]
+        arguments:
+            parameters: [{name: task-info, value: task--0x394388f49792f72}, {name: runtime, value: 7.287}]
+      - name: task-0x5136910d27564aa3
+        template: task
+        dependencies: [task--0x64f40668fe82071]
+        arguments:
+            parameters: [{name: task-info, value: task-0x5136910d27564aa3}, {name: runtime, value: 573.0}]
+      - name: task--0x6b538f10cbe88dec
+        template: task
+        dependencies: [task--0x394388f49792f72, task-0x4da44e2a1a04d833, task--0x33bb8da091d0fa0c, task-0x3e73f7737709a21b, task--0x699a1c7d2106f162]
+        arguments:
+            parameters: [{name: task-info, value: task--0x6b538f10cbe88dec}, {name: runtime, value: 0.0}]
+      - name: task--0x400fa955167fd0bb
+        template: task
+        dependencies: [task-0x238825d18ea6976, task--0x6b538f10cbe88dec, task--0x699a1c7d2106f162]
+        arguments:
+            parameters: [{name: task-info, value: task--0x400fa955167fd0bb}, {name: runtime, value: 20.583}]
+  - name: task
+    inputs:
+      parameters:
+      - name: task-info
+      - name: runtime
+    container:
+      image: alpine:3.7
+      command: ["sh", "-c", "echo {{ inputs.parameters.task-info }} && sleep {{inputs.parameters.runtime}}"]
+      resources:
+        requests:
+          cpu: 1
