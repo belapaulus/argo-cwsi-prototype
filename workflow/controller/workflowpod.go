@@ -84,12 +84,14 @@ type createWorkflowPodOpts struct {
 func (woc *wfOperationCtx) createWorkflowPod(ctx context.Context, nodeName string, mainCtrs []apiv1.Container, tmpl *wfv1.Template, opts *createWorkflowPodOpts) (*apiv1.Pod, error) {
 	nodeID := woc.wf.NodeID(nodeName)
 
-	mynode, myerr := woc.wf.GetNodeByName(nodeName)
-	if myerr != nil {
-		panic("cws: this should not happen")
+	if woc.wf.Spec.SchedulerName != "default-scheduler" {
+		mynode, _ := woc.wf.GetNodeByName(nodeName)
+		podname := util.GeneratePodName(woc.wf.Name, mynode.Name, mynode.TemplateName, mynode.ID, util.GetWorkflowPodNameVersion(woc.wf))
+		if !woc.wf.Status.CWSRegisteredTasks[podname] {
+			woc.registerTask(mynode, podname)
+			woc.wf.Status.CWSRegisteredTasks[podname] = true
+		}
 	}
-	woc.cwslog("tyring to register node " + mynode.Name)
-	woc.registerTask(mynode, util.GeneratePodName(woc.wf.Name, mynode.Name, mynode.TemplateName, mynode.ID, util.GetWorkflowPodNameVersion(woc.wf)))
 
 	// we must check to see if the pod exists rather than just optimistically creating the pod and see if we get
 	// an `AlreadyExists` error because we won't get that error if there is not enough resources.
@@ -193,9 +195,9 @@ func (woc *wfOperationCtx) createWorkflowPod(ctx context.Context, nodeName strin
 			ImagePullSecrets:      woc.execWf.Spec.ImagePullSecrets,
 		},
 	}
-	// if scheduler name is set for workflow set scheduler name to cws
+	// if scheduler name is not default-scheduler set scheduler name to cws
 	// otherwise ignore
-	if woc.execWf.Spec.SchedulerName != "" {
+	if woc.execWf.Spec.SchedulerName != "default-scheduler" {
 		pod.Spec.SchedulerName = "workflow-scheduler-" + woc.execWf.ObjectMeta.Name
 	}
 
@@ -279,7 +281,6 @@ func (woc *wfOperationCtx) createWorkflowPod(ctx context.Context, nodeName strin
 	pod.Spec.InitContainers = []apiv1.Container{initCtr}
 
 	addSchedulingConstraints(pod, wfSpec, tmpl)
-	woc.log.Warn("cws: setting SchedulerName to:" + pod.Spec.SchedulerName)
 	woc.addMetadata(pod, tmpl)
 
 	err = addVolumeReferences(pod, woc.volumes, tmpl, woc.wf.Status.PersistentVolumeClaims)

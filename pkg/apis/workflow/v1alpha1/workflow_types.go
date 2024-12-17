@@ -1950,6 +1950,8 @@ type WorkflowStatus struct {
 	RegisteredWithCWS bool `json:"registeredWithCWS"`
 
 	CWSNodes map[string]bool `json:"cwsNodes"`
+
+	CWSRegisteredTasks map[string]bool `json:"cwsRegisteredTasks"`
 }
 
 func (ws *WorkflowStatus) MarkTaskResultIncomplete(name string) {

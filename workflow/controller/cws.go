@@ -2,8 +2,8 @@ package controller
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
+	"hash/fnv"
 	"net/http"
 	"strconv"
 	"strings"
@@ -60,17 +60,17 @@ type task struct {
 // TODO: close response bodies if necessary
 
 // var cwsURL = "http://localhost:8081"
+
 var cwsURL = "http://workflow-scheduler"
 var registeredTasks = 0
 
 func (woc *wfOperationCtx) cws() {
 	//deleteWF()
 	if !woc.execWf.Status.RegisteredWithCWS {
-		if woc.registerWF() && woc.submitWF() {
-			woc.wf.Status.RegisteredWithCWS = true
-		} else {
-			panic("could not register and submit workflow")
-		}
+		woc.registerWF()
+		woc.submitWF()
+		woc.wf.Status.CWSRegisteredTasks = make(map[string]bool)
+		woc.wf.Status.RegisteredWithCWS = true
 	}
 }
 
@@ -78,23 +78,21 @@ func (woc *wfOperationCtx) cwslog(msg string) {
 	woc.log.Info("cws: " + msg)
 }
 
-func (woc *wfOperationCtx) cwsPOST(path string, body any) (*http.Response, error) {
+func (woc *wfOperationCtx) cwsPOST(path string, body any) *http.Response {
 	jsonBytes, err := json.Marshal(body)
 	if err != nil {
-		woc.cwslog(err.Error())
-		return nil, errors.New("can not marshal body")
+		panic(err.Error())
 	}
 	jsonString := string(jsonBytes)
 	woc.cwslog("..." + jsonString)
 	resp, err := http.Post(cwsURL+"/v1/scheduler/"+woc.execWf.ObjectMeta.Name+path, "application/json", strings.NewReader(jsonString))
 	if err != nil {
-		woc.cwslog(err.Error())
-		return nil, errors.New("error making request")
+		panic(err.Error())
 	}
-	return resp, nil
+	return resp
 }
 
-func (woc *wfOperationCtx) registerWF() bool {
+func (woc *wfOperationCtx) registerWF() {
 	woc.cwslog("registering workflow")
 	body := registerWorkflowRequestBody{
 		Dns:          "",
@@ -102,38 +100,32 @@ func (woc *wfOperationCtx) registerWF() bool {
 		Namespace:    "argo",
 		Strategy:     woc.execWf.Spec.SchedulerName,
 	}
-	resp, err := woc.cwsPOST("", body)
+	resp := woc.cwsPOST("", body)
 	// TODO: read response code and handle errors
-	if err != nil || resp.StatusCode != 200 {
-		woc.cwslog(resp.Status)
-		return false
+	if resp.StatusCode != 200 {
+		panic(resp.Status)
 	}
 	woc.cwslog("...ok")
-	return true
 }
 
-func (woc *wfOperationCtx) deleteWF() bool {
+func (woc *wfOperationCtx) deleteWF() {
 	woc.cwslog("deleting workflow")
 	client := &http.Client{}
 	req, err := http.NewRequest("DELETE", cwsURL+"/v1/scheduler/"+woc.execWf.ObjectMeta.Name, nil)
 	if err != nil {
-		woc.cwslog(err.Error())
-		return false
+		panic(err.Error())
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		woc.cwslog(err.Error())
-		return false
+		panic(err.Error())
 	}
 	if resp.StatusCode != 200 {
-		woc.cwslog("..." + resp.Status)
-		return false
+		panic("..." + resp.Status)
 	}
 	woc.cwslog("...ok")
-	return true
 }
 
-func (woc *wfOperationCtx) submitWF() bool {
+func (woc *wfOperationCtx) submitWF() {
 	// submit graph
 	// TODO save normalization map
 	nodes := woc.parseTemplateTree()
@@ -170,65 +162,52 @@ func (woc *wfOperationCtx) submitWF() bool {
 			edgeCount += 1
 		}
 	}
-	resp, err := woc.cwsPOST("/DAG/vertices", verticesBody)
-	if err != nil {
-		panic("could not submit vertices: " + err.Error())
-	}
+	resp := woc.cwsPOST("/DAG/vertices", verticesBody)
 	if resp.StatusCode != 200 {
 		panic("could not submit vertices: " + resp.Status)
 	}
 	if edgesBody == nil {
-		return true
+		return
 	}
-	resp, err = woc.cwsPOST("/DAG/edges", edgesBody)
-	if err != nil {
-		panic("could not submit edges" + err.Error())
-	}
+	resp = woc.cwsPOST("/DAG/edges", edgesBody)
 	if resp.StatusCode != 200 {
 		panic("could not submit edges" + resp.Status)
 	}
-	return true
 }
 
-func (woc *wfOperationCtx) startBatch() bool {
+func (woc *wfOperationCtx) startBatch() {
 	woc.cwslog("start batch")
 	client := &http.Client{}
 	req, err := http.NewRequest("PUT", cwsURL+"/v1/scheduler/"+woc.execWf.ObjectMeta.Name+"/startBatch", nil)
 	resp, err := client.Do(req)
 	if err != nil {
-		woc.cwslog(err.Error())
-		return false
+		panic(err.Error())
 	}
 	// TODO: read response code and handle errors
 	if resp.StatusCode != 200 {
-		woc.cwslog("..." + resp.Status)
-		return false
+		panic("..." + resp.Status)
 	}
 	woc.cwslog("...ok")
-	return true
 }
 
-func (woc *wfOperationCtx) endBatch() bool {
+func (woc *wfOperationCtx) endBatch() {
 	woc.cwslog("end batch")
 	client := &http.Client{}
 	req, err := http.NewRequest("PUT", cwsURL+"/v1/scheduler/"+woc.execWf.ObjectMeta.Name+"/endBatch", strings.NewReader(strconv.Itoa(registeredTasks)))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
-		woc.cwslog(err.Error())
-		return false
+		panic(err.Error())
 	}
 	// TODO: read response code and handle errors
 	if resp.StatusCode != 200 {
-		woc.cwslog("..." + resp.Status)
-		return false
+		panic("..." + resp.Status)
 	}
 	registeredTasks = 0
 	woc.cwslog("...ok")
-	return true
 }
 
-func (woc *wfOperationCtx) registerTask(node *v1alpha1.NodeStatus, podName string) bool {
+func (woc *wfOperationCtx) registerTask(node *v1alpha1.NodeStatus, podName string) {
 	name := woc.normalizeTaskName(node.Name)
 	woc.cwslog("registering task '" + node.Name + "' with normalized name '" + name + "'")
 	// TODO: understand task fields
@@ -242,17 +221,17 @@ func (woc *wfOperationCtx) registerTask(node *v1alpha1.NodeStatus, podName strin
 		MemoryInBytes:   128000000,
 		WorkDir:         "/",
 	}
-	// TODO taskid
-	taskID := 0
-	resp, err := woc.cwsPOST("/task/"+strconv.Itoa(taskID), body)
+	h := fnv.New32a()
+	// using podname because id must be unique
+	_, _ = h.Write([]byte(podName))
+	taskID := h.Sum32()
+	resp := woc.cwsPOST("/task/"+strconv.Itoa(int(taskID)), body)
 	// TODO: read response code and handle errors
-	if err != nil || resp.StatusCode != 200 {
-		woc.cwslog("...error")
-		return false
+	if resp.StatusCode != 200 {
+		panic("...error")
 	}
 	registeredTasks++
 	woc.cwslog("...ok")
-	return true
 }
 
 func (woc *wfOperationCtx) normalizeTaskName(taskName string) string {
